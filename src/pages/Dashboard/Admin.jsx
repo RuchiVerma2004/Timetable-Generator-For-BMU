@@ -1,10 +1,15 @@
 import { useState } from "react";
-import { Users, Calendar, Settings, BarChart3, Plus, Download, Filter } from "lucide-react";
+import { Users, Calendar, Settings, BarChart3, Plus, Download, Filter, Upload, FileText, Clock, Eye } from "lucide-react";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
+import ExcelUpload from "../../components/ExcelUpload";
+import TimetableGenerator from "../../components/TimetableGenerator";
+import TimetableViewer from "../../components/TimetableViewer";
 
 export default function Admin() {
   const [activeTab, setActiveTab] = useState("overview");
+  const [uploadedData, setUploadedData] = useState(null);
+  const [generatedTimetable, setGeneratedTimetable] = useState(null);
 
   const systemStats = {
     totalStudents: 1247,
@@ -95,7 +100,7 @@ export default function Admin() {
             <div className="lg:col-span-2">
               <div className="bg-white rounded-2xl shadow-md p-6">
                 <div className="flex space-x-4 border-b border-gray-200 mb-6">
-                  {["overview", "conflicts", "reports"].map((tab) => (
+                  {["overview", "upload", "generate", "view", "conflicts", "reports"].map((tab) => (
                     <button
                       key={tab}
                       className={`pb-4 px-2 font-medium ${
@@ -122,11 +127,88 @@ export default function Admin() {
                       <div className="grid grid-cols-2 gap-4">
                         <div className="p-4 bg-blue-50 rounded-lg">
                           <p className="text-sm text-blue-600">Last Timetable Generation</p>
-                          <p className="font-semibold text-blue-800">2 hours ago</p>
+                          <p className="font-semibold text-blue-800">
+                            {generatedTimetable ? new Date(generatedTimetable.generatedAt).toLocaleString() : 'Not generated yet'}
+                          </p>
                         </div>
                         <div className="p-4 bg-purple-50 rounded-lg">
-                          <p className="text-sm text-purple-600">Active Users</p>
-                          <p className="font-semibold text-purple-800">47 Online</p>
+                          <p className="text-sm text-purple-600">Data Status</p>
+                          <p className="font-semibold text-purple-800">
+                            {uploadedData ? 'Data Loaded' : 'No Data Uploaded'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === "upload" && (
+                  <div>
+                    <ExcelUpload onDataProcessed={setUploadedData} />
+                  </div>
+                )}
+
+                {activeTab === "generate" && (
+                  <div>
+                    <TimetableGenerator 
+                      data={uploadedData} 
+                      onTimetableGenerated={setGeneratedTimetable}
+                    />
+                  </div>
+                )}
+
+                {activeTab === "view" && (
+                  <div>
+                    <TimetableViewer timetableData={generatedTimetable} />
+                  </div>
+                )}
+
+                {activeTab === "conflicts" && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-blue-900 mb-4">Conflict Management</h3>
+                    <div className="space-y-4">
+                      {generatedTimetable ? (
+                        <div className="p-4 bg-yellow-50 rounded-lg">
+                          <p className="text-yellow-800">Timetable generated successfully with conflict detection.</p>
+                        </div>
+                      ) : (
+                        <div className="p-4 bg-gray-50 rounded-lg">
+                          <p className="text-gray-600">Generate a timetable first to view conflicts.</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === "reports" && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-blue-900 mb-4">Reports & Analytics</h3>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="p-4 bg-blue-50 rounded-lg">
+                          <h4 className="font-semibold text-blue-900 mb-2">Data Summary</h4>
+                          {uploadedData ? (
+                            <div className="space-y-1 text-sm">
+                              <p>Courses: {uploadedData.courses?.length || 0}</p>
+                              <p>Professors: {uploadedData.professors?.length || 0}</p>
+                              <p>Rooms: {uploadedData.rooms?.length || 0}</p>
+                              <p>Batches: {uploadedData.batches?.length || 0}</p>
+                            </div>
+                          ) : (
+                            <p className="text-gray-600">No data uploaded</p>
+                          )}
+                        </div>
+                        <div className="p-4 bg-green-50 rounded-lg">
+                          <h4 className="font-semibold text-green-900 mb-2">Timetable Status</h4>
+                          {generatedTimetable ? (
+                            <div className="space-y-1 text-sm">
+                              <p>Total Classes: {generatedTimetable.statistics?.totalClasses || 0}</p>
+                              <p>Batches Scheduled: {Object.keys(generatedTimetable.schedules || {}).length}</p>
+                              <p>Generated: {new Date(generatedTimetable.generatedAt).toLocaleDateString()}</p>
+                            </div>
+                          ) : (
+                            <p className="text-gray-600">No timetable generated</p>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -156,17 +238,65 @@ export default function Admin() {
               <div className="bg-white rounded-2xl shadow-md p-6">
                 <h3 className="text-lg font-bold text-blue-900 mb-4">Quick Actions</h3>
                 <div className="space-y-3">
-                  <button className="w-full text-left p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
-                    <p className="font-medium text-blue-800">Manage Users</p>
-                    <p className="text-sm text-blue-600">Add/remove students and faculty</p>
+                  <button 
+                    onClick={() => setActiveTab('upload')}
+                    className="w-full text-left p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <Upload size={18} className="text-blue-600" />
+                      <div>
+                        <p className="font-medium text-blue-800">Upload Excel Data</p>
+                        <p className="text-sm text-blue-600">Upload course, professor, and room data</p>
+                      </div>
+                    </div>
                   </button>
-                  <button className="w-full text-left p-3 bg-green-50 rounded-lg hover:bg-green-100 transition-colors">
-                    <p className="font-medium text-green-800">Room Management</p>
-                    <p className="text-sm text-green-600">View and manage room allocations</p>
+                  <button 
+                    onClick={() => setActiveTab('generate')}
+                    className="w-full text-left p-3 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <Clock size={18} className="text-green-600" />
+                      <div>
+                        <p className="font-medium text-green-800">Generate Timetable</p>
+                        <p className="text-sm text-green-600">Create optimized timetables automatically</p>
+                      </div>
+                    </div>
                   </button>
-                  <button className="w-full text-left p-3 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors">
-                    <p className="font-medium text-purple-800">Generate Reports</p>
-                    <p className="text-sm text-purple-600">Export system analytics</p>
+                  <button 
+                    onClick={() => setActiveTab('view')}
+                    className="w-full text-left p-3 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <Eye size={18} className="text-indigo-600" />
+                      <div>
+                        <p className="font-medium text-indigo-800">View Timetable</p>
+                        <p className="text-sm text-indigo-600">3D visualization and table view</p>
+                      </div>
+                    </div>
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab('conflicts')}
+                    className="w-full text-left p-3 bg-yellow-50 rounded-lg hover:bg-yellow-100 transition-colors"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <FileText size={18} className="text-yellow-600" />
+                      <div>
+                        <p className="font-medium text-yellow-800">View Conflicts</p>
+                        <p className="text-sm text-yellow-600">Check for scheduling conflicts</p>
+                      </div>
+                    </div>
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab('reports')}
+                    className="w-full text-left p-3 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <BarChart3 size={18} className="text-purple-600" />
+                      <div>
+                        <p className="font-medium text-purple-800">View Reports</p>
+                        <p className="text-sm text-purple-600">System analytics and statistics</p>
+                      </div>
+                    </div>
                   </button>
                 </div>
               </div>
