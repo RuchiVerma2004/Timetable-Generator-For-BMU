@@ -34,7 +34,7 @@ export default function CSFControls({
             </select>
           </div>
           <div className="flex items-end">
-            <button onClick={onFindCommon} disabled={!selectedBatch || !selectedSemester} className="w-full bg-indigo-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition flex items-center justify-center gap-2">
+            <button onClick={onFindCommon} disabled={!selectedSemester} className="w-full bg-indigo-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition flex items-center justify-center gap-2">
               <Search className="w-5 h-5" /> Find Common Slots
             </button>
           </div>

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Search } from 'lucide-react';
 
-export default function CSFSelectors({  semesters, selectedBatch, selectedSemester, setSelectedSemester, onGenerate, includeAllSections, setIncludeAllSections }) {
+export default function CSFSelectors({ semesters, selectedSemester, setSelectedSemester, onGenerate, includeAllSections, setIncludeAllSections }) {
   return (
     <div className="grid md:grid-cols-3 gap-4 mb-6">
       {/* <div>
@@ -25,7 +25,7 @@ export default function CSFSelectors({  semesters, selectedBatch, selectedSemest
         </label>
       </div>
       <div className="flex items-end">
-        <button onClick={onGenerate} disabled={!includeAllSections && (!selectedBatch || !selectedSemester)} className="w-full bg-indigo-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition flex items-center justify-center gap-2">
+  <button onClick={onGenerate} disabled={!includeAllSections && !selectedSemester} className="w-full bg-indigo-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition flex items-center justify-center gap-2">
           <Search className="w-5 h-5" />
           Generate Common Slots
         </button>

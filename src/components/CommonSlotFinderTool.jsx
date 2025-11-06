@@ -9,7 +9,7 @@ const CommonSlotFinderTool = () => {
   const [timetable, setTimetable] = useState(null);
   const [DAYS, setDAYS] = useState([]);
   const [generateTimeSlots, setGenerateTimeSlots] = useState([]);
-  const [selectedBatch, setSelectedBatch] = useState('');
+  // selectedBatch was removed in favor of semester-wide selection
   const [selectedSemester, setSelectedSemester] = useState('');
   const [commonSlots, setCommonSlots] = useState(null);
   const [includeAllSections, setIncludeAllSections] = useState(false);
@@ -95,50 +95,100 @@ const CommonSlotFinderTool = () => {
     }
   };
 
-  const { batches, semesters } = useMemo(() => {
-    if (!timetable) return { batches: [], semesters: [] };
-    const batchSet = new Set();
+  const { semesters } = useMemo(() => {
+    if (!timetable) return { semesters: [] };
     const semSet = new Set();
     Object.keys(timetable).forEach((key) => {
       const parts = key.split('_');
       if (parts.length >= 4) {
-        batchSet.add(parts[1]);
         semSet.add(parts[3]);
       }
     });
-    return { batches: Array.from(batchSet).sort(), semesters: Array.from(semSet).sort() };
+    return { semesters: Array.from(semSet).sort() };
   }, [timetable]);
 
   const findCommonFreeSlots = () => {
     if (!timetable) return;
     let sectionsToCheck = [];
+
+    // First, get all sections for the selected semester
+    if (!selectedSemester && !includeAllSections) {
+      alert('Please select a semester or enable "Across all sections"');
+      return;
+    }
+
+    // Get sections based on selection
     if (includeAllSections) {
       sectionsToCheck = Object.keys(timetable);
     } else {
-      if (!selectedBatch || !selectedSemester) return;
-      sectionsToCheck = Object.keys(timetable).filter(
-        (key) => key.includes(`Batch_${selectedBatch}`) && key.includes(`Sem_${selectedSemester}`)
-      );
+      sectionsToCheck = Object.keys(timetable).filter(key => {
+        const parts = key.split('_');
+        return parts.length >= 4 && parts[3] === selectedSemester;
+      });
     }
+
     if (sectionsToCheck.length === 0) {
-      alert('No sections found for selected batch and semester');
+      alert(includeAllSections ? 'No sections found in timetable' : `No sections found for semester ${selectedSemester}`);
       return;
     }
+
+    // Initialize common slots data structure
     const common = {};
-    DAYS.forEach((day) => {
+    const slotStatus = {}; // Track detailed status of each slot
+
+    // First pass: collect all slot statuses
+    DAYS.forEach(day => {
       common[day] = [];
-      generateTimeSlots.forEach((slot) => {
-        const isFreeInAll = sectionsToCheck.every((section) => {
+      slotStatus[day] = {};
+      
+      generateTimeSlots.forEach(slot => {
+        slotStatus[day][slot] = {
+          isFree: true,
+          sections: [],
+          status: [] // Track what's happening in each section
+        };
+
+        sectionsToCheck.forEach(section => {
           const daySchedule = timetable[section][day] || [];
-          const entry = daySchedule.find((e) => e.time === slot);
-          return !entry || entry.course === 'FREE';
+          const entry = daySchedule.find(e => e.time === slot);
+          
+          if (!entry) {
+            slotStatus[day][slot].sections.push(section);
+            slotStatus[day][slot].status.push('empty');
+          } else {
+            const courseText = (entry.course || '').toString().trim().toUpperCase();
+            if (courseText === 'FREE' || courseText === 'LUNCH' || courseText.length === 0) {
+              slotStatus[day][slot].sections.push(section);
+              slotStatus[day][slot].status.push(courseText || 'empty');
+            } else {
+              slotStatus[day][slot].isFree = false;
+              slotStatus[day][slot].status.push(courseText);
+            }
+          }
         });
-        if (isFreeInAll) {
-          common[day].push({ slot, sections: sectionsToCheck.length });
+      });
+    });
+
+    // Second pass: identify truly common free slots
+    DAYS.forEach(day => {
+      generateTimeSlots.forEach(slot => {
+        const slotInfo = slotStatus[day][slot];
+        if (slotInfo.isFree && slotInfo.sections.length === sectionsToCheck.length) {
+          common[day].push({
+            slot,
+            sections: sectionsToCheck.length,
+            status: slotInfo.status // Include status for UI feedback
+          });
         }
       });
     });
-    setCommonSlots({ batch: selectedBatch, semester: selectedSemester, sections: sectionsToCheck, slots: common });
+
+    setCommonSlots({
+      semester: selectedSemester,
+      sections: sectionsToCheck,
+      slots: common,
+      slotStatus // Include detailed status for better UI feedback
+    });
   };
 
   const exportCommonSlots = () => {
@@ -176,10 +226,7 @@ const CommonSlotFinderTool = () => {
       ) : (
         <>
           <CSFSelectors
-            batches={batches}
             semesters={semesters}
-            selectedBatch={selectedBatch}
-            setSelectedBatch={setSelectedBatch}
             selectedSemester={selectedSemester}
             setSelectedSemester={setSelectedSemester}
             includeAllSections={includeAllSections}
