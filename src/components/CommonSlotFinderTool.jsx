@@ -12,6 +12,7 @@ const CommonSlotFinderTool = () => {
   const [selectedBatch, setSelectedBatch] = useState('');
   const [selectedSemester, setSelectedSemester] = useState('');
   const [commonSlots, setCommonSlots] = useState(null);
+  const [includeAllSections, setIncludeAllSections] = useState(false);
   const [status, setStatus] = useState('');
 
   const parseUploadedWorkbook = async (file) => {
@@ -109,10 +110,16 @@ const CommonSlotFinderTool = () => {
   }, [timetable]);
 
   const findCommonFreeSlots = () => {
-    if (!timetable || !selectedBatch || !selectedSemester) return;
-    const sectionsToCheck = Object.keys(timetable).filter(
-      (key) => key.includes(`Batch_${selectedBatch}`) && key.includes(`Sem_${selectedSemester}`)
-    );
+    if (!timetable) return;
+    let sectionsToCheck = [];
+    if (includeAllSections) {
+      sectionsToCheck = Object.keys(timetable);
+    } else {
+      if (!selectedBatch || !selectedSemester) return;
+      sectionsToCheck = Object.keys(timetable).filter(
+        (key) => key.includes(`Batch_${selectedBatch}`) && key.includes(`Sem_${selectedSemester}`)
+      );
+    }
     if (sectionsToCheck.length === 0) {
       alert('No sections found for selected batch and semester');
       return;
@@ -175,6 +182,8 @@ const CommonSlotFinderTool = () => {
             setSelectedBatch={setSelectedBatch}
             selectedSemester={selectedSemester}
             setSelectedSemester={setSelectedSemester}
+            includeAllSections={includeAllSections}
+            setIncludeAllSections={setIncludeAllSections}
             onGenerate={findCommonFreeSlots}
           />
 
