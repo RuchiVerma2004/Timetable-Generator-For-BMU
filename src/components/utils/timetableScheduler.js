@@ -31,7 +31,7 @@ export const timetableScheduler = {
     return null;
   },
 
-  scheduleTimetable: (courses, professors, rooms, TIME_SLOTS, settings) => {
+  scheduleTimetable: (courses, professors, rooms, TIME_SLOTS, settings, preferences = null) => {
     const schedule = {};
     const globalTeacherSchedule = {};
     const globalRoomSchedule = {};
@@ -361,12 +361,29 @@ export const timetableScheduler = {
               }
 
               const profKey = `${course.courseAbb}_${semester}`;
-              const availableProfs = professorMap[profKey] || [];
+              let availableProfs = professorMap[profKey] || [];
+
+              // Sort professors by their preference level if preferences are available
+              if (preferences) {
+                const courseCode = course['Course Code'] || course.courseCode;
+                availableProfs.sort((a, b) => {
+                  const prefA = preferences.teacherPreferences[a.Name]?.[courseCode]?.[sectionKey] || 0;
+                  const prefB = preferences.teacherPreferences[b.Name]?.[courseCode]?.[sectionKey] || 0;
+                  return prefB - prefA; // Higher preference first
+                });
+              }
 
               for (const prof of availableProfs) {
                 if (anyScheduled) break;
                 if (globalTeacherSchedule[globalKey].has(prof.Name)) continue;
                 if (!AvailabilityParser.isAvailableAtTime(prof.availability, day, slot)) continue;
+
+                // Skip if teacher has explicitly marked no preference (preference = 0)
+                if (preferences) {
+                  const courseCode = course['Course Code'] || course.courseCode;
+                  const prefLevel = preferences.teacherPreferences[prof.Name]?.[courseCode]?.[sectionKey];
+                  if (prefLevel === 0) continue; // Skip if teacher has explicitly marked no preference
+                }
 
                 const shouldSchedulePractical = needsPractical && slotIndex < TIME_SLOTS.length - 1 && !timetableScheduler.isLunchSlot(TIME_SLOTS[slotIndex + 1], lunchOffset, settings);
                 const isPractical = shouldSchedulePractical;

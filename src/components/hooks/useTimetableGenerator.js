@@ -1,11 +1,13 @@
 import { useState, useMemo } from 'react';
 import { timetableScheduler } from '../utils/timetableScheduler';
 import { excelParser } from '../utils/excelParser';
+import { PreferenceParser } from '../utils/preferenceParser';
 
 export const useTimetableGenerator = (onGenerated) => {
   const [courses, setCourses] = useState([]);
   const [professors, setProfessors] = useState([]);
   const [rooms, setRooms] = useState([]);
+  const [preferences, setPreferences] = useState(null);
   const [timetable, setTimetable] = useState(null);
   const [oeBasketInfo, setOeBasketInfo] = useState({ oe1: [], oe2: [] });
   const [status, setStatus] = useState({ type: '', message: '' });
@@ -52,6 +54,10 @@ export const useTimetableGenerator = (onGenerated) => {
       } else if (type === 'rooms') {
         setRooms(data);
         setStatus({ type: 'success', message: `Loaded ${data.length} rooms` });
+      } else if (type === 'preferences') {
+        const parsedPreferences = PreferenceParser.parsePreferences(data);
+        setPreferences(parsedPreferences);
+        setStatus({ type: 'success', message: 'Loaded teacher preferences successfully' });
       }
     } catch (error) {
       setStatus({ type: 'error', message: `Error loading ${type}: ${error.message}` });
@@ -73,7 +79,8 @@ export const useTimetableGenerator = (onGenerated) => {
           professors,
           rooms,
           generateTimeSlots,
-          settings
+          settings,
+          preferences
         );
         setTimetable(result.schedule);
         setOeBasketInfo(result.oeBasketInfo);
